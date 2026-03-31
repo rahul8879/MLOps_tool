@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException,Query
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
 from services.run_service import get_runs_by_experiment
 import math
@@ -6,16 +6,12 @@ from datetime import datetime
 
 
 def make_json_safe(obj):
-    """
-    Recursively clean any object before JSON response.
-    Handles nan, inf, datetime, nested dicts, lists.
-    """
     if isinstance(obj, float):
         if math.isnan(obj) or math.isinf(obj):
             return None
         return obj
     elif isinstance(obj, datetime):
-        return obj.isoformat()        # ← datetime fix
+        return obj.isoformat()
     elif isinstance(obj, dict):
         return {k: make_json_safe(v) for k, v in obj.items()}
     elif isinstance(obj, list):
@@ -28,9 +24,10 @@ router = APIRouter(
     tags=["Runs — Data Scientist"]
 )
 
+
 @router.get(
     "/{experiment_id}/runs",
-    summary="DS-003: Get all runs for an experiment"
+    summary="DS-003: Get FINISHED runs for an experiment"
 )
 def list_runs(
     experiment_id: str,

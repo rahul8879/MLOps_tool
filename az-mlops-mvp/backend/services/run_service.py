@@ -10,11 +10,6 @@ def _ms_to_dt(ms):
 
 
 def _clean_value(value: Any) -> Any:
-    """
-    Sanitize any value coming from Databricks:
-    - float nan/inf → None
-    - anything else → as is
-    """
     if isinstance(value, float):
         if math.isnan(value) or math.isinf(value):
             return None
@@ -52,10 +47,16 @@ def _parse_run(run) -> RunResponse:
         tags=tags,
     )
 
-def get_runs_by_experiment(experiment_id: str, max_results: int = 10) -> List[RunResponse]:
+
+def get_runs_by_experiment(
+    experiment_id: str,
+    max_results: int = 20
+) -> List[RunResponse]:
+    """DS-003 — Get FINISHED runs for a given experiment ID"""
     client = get_databricks_client()
     runs = list(client.experiments.search_runs(
         experiment_ids=[experiment_id],
-        max_results=max_results
+        max_results=max_results,
+        filter="attributes.status = 'FINISHED'"
     ))
     return [_parse_run(r) for r in runs]
