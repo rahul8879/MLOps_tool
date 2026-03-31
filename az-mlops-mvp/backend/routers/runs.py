@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException,Query
 from fastapi.responses import JSONResponse
 from services.run_service import get_runs_by_experiment
 import math
@@ -28,14 +28,16 @@ router = APIRouter(
     tags=["Runs — Data Scientist"]
 )
 
-
 @router.get(
     "/{experiment_id}/runs",
     summary="DS-003: Get all runs for an experiment"
 )
-def list_runs(experiment_id: str):
+def list_runs(
+    experiment_id: str,
+    max_results: int = Query(default=20, description="Max runs to fetch", le=200)
+):
     try:
-        runs = get_runs_by_experiment(experiment_id)
+        runs = get_runs_by_experiment(experiment_id, max_results=max_results)
         safe_data = make_json_safe([r.model_dump() for r in runs])
         return JSONResponse(content=safe_data)
     except Exception as e:

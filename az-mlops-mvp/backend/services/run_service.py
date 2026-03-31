@@ -52,10 +52,10 @@ def _parse_run(run) -> RunResponse:
         tags=tags,
     )
 
-
-def get_runs_by_experiment(experiment_id: str) -> List[RunResponse]:
+def get_runs_by_experiment(experiment_id: str, max_results: int = 10) -> List[RunResponse]:
     client = get_databricks_client()
     runs = list(client.experiments.search_runs(
-        experiment_ids=[experiment_id]
+        experiment_ids=[experiment_id],
+        max_results=max_results
     ))
     return [_parse_run(r) for r in runs]
