@@ -10,10 +10,12 @@ def get_all_experiments() -> List[ExperimentResponse]:
 
     result = []
     for exp in experiments:
+        # tags: List[ExperimentTag] → {key: value}
         tags = {}
         if exp.tags:
             tags = {t.key: t.value for t in exp.tags}
 
+        # creation_time: int (ms) → datetime
         created_at = None
         if exp.creation_time:
             created_at = datetime.fromtimestamp(
@@ -24,7 +26,7 @@ def get_all_experiments() -> List[ExperimentResponse]:
             experiment_id=exp.experiment_id,
             name=exp.name,
             artifact_location=exp.artifact_location,
-            lifecycle_stage=exp.lifecycle_stage.value if exp.lifecycle_stage else None,
+            lifecycle_stage=exp.lifecycle_stage,  # already str!
             tags=tags,
             creation_time=created_at,
         ))
