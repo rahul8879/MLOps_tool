@@ -1,15 +1,24 @@
 import math
-from datetime import datetime, timezone
-from typing import List
-
 from core.databricks_client import get_databricks_client
 from schemas.run import RunResponse
+from typing import List, Any
+from datetime import datetime, timezone
 
 
 def _ms_to_dt(ms):
-    if ms is None:
-        return None
-    return datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
+    return datetime.fromtimestamp(ms / 1000, tz=timezone.utc) if ms else None
+
+
+def _clean_value(value: Any) -> Any:
+    """
+    Sanitize any value coming from Databricks:
+    - float nan/inf → None
+    - anything else → as is
+    """
+    if isinstance(value, float):
+        if math.isnan(value) or math.isinf(value):
+            return None
+    return value
 
 
 def _parse_run(run) -> RunResponse:
@@ -22,20 +31,11 @@ def _parse_run(run) -> RunResponse:
 
     if data:
         if data.metrics:
-            metrics = {
-                m.key: (
-                    None
-                    if m.value is None or math.isnan(m.value) or math.isinf(m.value)
-                    else m.value
-                )
-                for m in data.metrics
-            }
-
+            metrics = {m.key: _clean_value(m.value) for m in data.metrics}
         if data.params:
-            params = {p.key: p.value for p in data.params}
-
+            params = {p.key: _clean_value(p.value) for p in data.params}
         if data.tags:
-            tags = {t.key: t.value for t in data.tags}
+            tags = {t.key: _clean_value(t.value) for t in data.tags}
 
     return RunResponse(
         run_id=info.run_id,
@@ -53,17 +53,9 @@ def _parse_run(run) -> RunResponse:
     )
 
 
-# ── DS-003: Get all runs for an experiment ──────────────────────
 def get_runs_by_experiment(experiment_id: str) -> List[RunResponse]:
     client = get_databricks_client()
-    runs = client.experiments.search_runs(
+    runs = list(client.experiments.search_runs(
         experiment_ids=[experiment_id]
-    )
-    return [_parse_run(run) for run in runs]
-
-
-# ── DS-004: Get metrics for a specific run ──────────────────────
-def get_run_by_id(run_id: str) -> RunResponse:
-    client = get_databricks_client()
-    run = client.experiments.get_run(run_id=run_id)
-    return _parse_run(run.run)
+    ))
+    return [_parse_run(r) for r in runs]
