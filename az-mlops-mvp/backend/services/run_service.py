@@ -39,15 +39,13 @@ def _parse_run(run) -> RunResponse:
         tags=tags,
     )
 
-
 def get_runs_by_experiment(experiment_id: str) -> List[RunResponse]:
     """DS-003 — Get all runs for a given experiment ID"""
     client = get_databricks_client()
 
-    # search_runs returns SearchRunsResponse — access .runs
-    response = client.experiments.search_runs(
+    # search_runs returns Iterator[Run] — directly list() karo
+    runs = list(client.experiments.search_runs(
         experiment_ids=[experiment_id]
-    )
+    ))
 
-    runs = response.runs if response.runs else []
     return [_parse_run(r) for r in runs]
