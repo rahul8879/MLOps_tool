@@ -9,13 +9,8 @@ def _ms_to_dt(ms):
 
 
 def _parse_run(run) -> RunResponse:
-    """
-    Common parser for a Run object from Databricks SDK.
-    run.info  → RunInfo
-    run.data  → RunData (metrics, params, tags)
-    """
-    info = run.info
-    data = run.data
+    info = run.info   # RunInfo object
+    data = run.data   # RunData object
 
     metrics = {}
     params = {}
@@ -23,7 +18,6 @@ def _parse_run(run) -> RunResponse:
 
     if data:
         if data.metrics:
-            # Only latest value per key
             metrics = {m.key: m.value for m in data.metrics}
         if data.params:
             params = {p.key: p.value for p in data.params}
@@ -32,7 +26,7 @@ def _parse_run(run) -> RunResponse:
 
     return RunResponse(
         run_id=info.run_id,
-        run_name=info.run_name,
+        run_name=info.run_name if hasattr(info, 'run_name') else None,
         experiment_id=info.experiment_id,
         status=info.status.value if info.status else None,
         lifecycle_stage=info.lifecycle_stage,
@@ -49,7 +43,11 @@ def _parse_run(run) -> RunResponse:
 def get_runs_by_experiment(experiment_id: str) -> List[RunResponse]:
     """DS-003 — Get all runs for a given experiment ID"""
     client = get_databricks_client()
-    runs = client.experiments.search_runs(
+
+    # search_runs returns SearchRunsResponse — access .runs
+    response = client.experiments.search_runs(
         experiment_ids=[experiment_id]
     )
+
+    runs = response.runs if response.runs else []
     return [_parse_run(r) for r in runs]
