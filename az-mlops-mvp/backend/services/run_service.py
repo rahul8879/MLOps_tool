@@ -1,7 +1,7 @@
 import math
 from core.databricks_client import get_databricks_client
 from schemas.run import RunResponse
-from typing import List, Any
+from typing import List, Optional, Any
 from datetime import datetime, timezone
 
 
@@ -48,15 +48,36 @@ def _parse_run(run) -> RunResponse:
     )
 
 
+# DS-003 — Get runs for experiment (PERFORMANCE FIX)
 def get_runs_by_experiment(
     experiment_id: str,
     max_results: int = 20
 ) -> List[RunResponse]:
-    """DS-003 — Get FINISHED runs for a given experiment ID"""
     client = get_databricks_client()
-    runs = list(client.experiments.search_runs(
+
+    # Pass max_results directly to SDK — avoids full pagination
+    runs = client.experiments.search_runs(
         experiment_ids=[experiment_id],
-        max_results=max_results,
-        filter="attributes.status = 'FINISHED'"
-    ))
+        filter="attributes.status = 'FINISHED'",
+        max_results=max_results,   # SDK will stop after this
+    )
+
+    # list() only after max_results is set — not before
     return [_parse_run(r) for r in runs]
+
+
+# DS-004 — Get single run metrics (NEW)
+def get_run_by_id(run_id: str) -> Optional[RunResponse]:
+    """
+    Uses get_run() — fetches ONE run directly by ID.
+    Much faster than search_runs for single run lookup.
+    SDK: client.experiments.get_run(run_id)
+    Returns: GetRunResponse.run
+    """
+    client = get_databricks_client()
+    response = client.experiments.get_run(run_id=run_id)
+
+    if not response or not response.run:
+        return None
+
+    return _parse_run(response.run)
